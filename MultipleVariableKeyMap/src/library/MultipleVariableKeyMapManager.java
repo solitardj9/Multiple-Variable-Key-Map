@@ -10,6 +10,8 @@ public interface MultipleVariableKeyMapManager {
 	//
 	public Boolean addMap(String mapName) throws ExceptionAlreadyExist;
 	
+	public Map<String/*key*/, Object/*current value*/> getMap(String mapName) throws ExceptionNotFound;
+	
 	public Boolean deleteMap(String mapName) throws ExceptionNotFound;
 	
 	public Object/*previous value*/ put(String mapName, String key, Object value);
