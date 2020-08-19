@@ -2,7 +2,7 @@
 
 ## 1. Multiple Variable Key
 > 1) shoud be defined by JSON
-> 2) shoud have 1 depth
+> 2) shoud be 1 depth
     
 > example)
 <pre>
