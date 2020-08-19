@@ -4,8 +4,8 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="test"/>
 	<classpathentry kind="src" path="jarLiabrary"/>
-	<classpathentry kind="lib" path="/home/ssdadmin/workspace/test/Multiple Variable Key Map/MultipleVariableKeyMap/jarLiabrary/gson-2.8.6.jar"/>
-	<classpathentry kind="lib" path="/home/ssdadmin/workspace/test/Multiple Variable Key Map/MultipleVariableKeyMap/jarLiabrary/guava-29.0-jre.jar"/>
-	<classpathentry kind="lib" path="/home/ssdadmin/workspace/test/Multiple Variable Key Map/MultipleVariableKeyMap/jarLiabrary/slf4j-api-1.7.30.jar"/>
+	<classpathentry kind="lib" path="jarLiabrary/gson-2.8.6.jar"/>
+	<classpathentry kind="lib" path="jarLiabrary/guava-29.0-jre.jar"/>
+	<classpathentry kind="lib" path="jarLiabrary/slf4j-api-1.7.30.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
