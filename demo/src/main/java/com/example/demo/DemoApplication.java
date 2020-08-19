@@ -8,14 +8,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 
+import com.example.demo.jsonKeyMapManager.service.JsonKeyMapManager;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import library.MultipleVariableKeyMapManager;
-import library.MultipleVariableKeyMapManagerImpl;
-import library.exception.ExceptionAlreadyExist;
-import library.exception.ExceptionBadRequest;
-import library.exception.ExceptionNotFound;
 
 @SpringBootApplication
 public class DemoApplication {
@@ -23,60 +20,102 @@ public class DemoApplication {
 	private static final Logger logger = LoggerFactory.getLogger(DemoApplication.class);
 
 	public static void main(String[] args) {
-		SpringApplication.run(DemoApplication.class, args);
+		
+		ConfigurableApplicationContext context = SpringApplication.run(DemoApplication.class, args);
+		
+		JsonKeyMapManager jsonKeyMapManager = (JsonKeyMapManager)context.getBean("jsonKeyMapManager");
 		
 		ObjectMapper om = new ObjectMapper();
-		
-		MultipleVariableKeyMapManager multipleVariableKeyMapManager = new MultipleVariableKeyMapManagerImpl();
-		
 		Random random = new Random();
 		
-		String mapName = "testMap";
-		try {
-			logger.info("test 1) addMap : " + multipleVariableKeyMapManager.addMap(mapName).toString());
-		} catch (ExceptionAlreadyExist e) {
-			logger.error(e.toString());
-		}
-		
-		for (Integer i = 0 ; i < 10000 ; i++) {
-			MyClass myClass = new MyClass(i.toString(), UUID.randomUUID().toString(), random.nextInt(100), Boolean.valueOf(i.toString()).toString(), random.nextInt(200));
+		System.out.println("// 1st insert ---------------------------------------------------------");
+		for (Integer i = 0 ; i < 3 ; i++) {
+			//MyClass myClass = new MyClass(i.toString(), UUID.randomUUID().toString(), random.nextInt(100), Boolean.valueOf(i.toString()).toString(), random.nextInt(200));
+			MyClass myClass = new MyClass(i.toString(), "sadfwstw4t4e", 1, Boolean.valueOf(i.toString()).toString(), 1);
 			try {
-				String strMyClass = om.writeValueAsString(myClass);
-				multipleVariableKeyMapManager.put(mapName, strMyClass, myClass.toString());
-				
-				try {
-					logger.info("key : " + strMyClass + ", stored data" + multipleVariableKeyMapManager.getByKey(mapName, strMyClass));
-				} catch (ExceptionNotFound | ExceptionBadRequest e) {
-					logger.error(e.toString());
-				}
-			} catch (Exception e) {
-				logger.error(e.toString());
+				String jsonKey = om.writeValueAsString(myClass);
+				jsonKeyMapManager.put(jsonKey, "test value");
+			} catch (JsonProcessingException e) {
+				logger.error("[DemoApplication].main = " + e);
 			}
 		}
-		System.out.println("test???");
 		
-		Integer testCase = 100;
-		for (Integer i = 0 ; i < testCase ; i++) {
-			//
-			String filter = "";
-			Integer age = random.nextInt(100);
-			filter = "{\"age\":" + age +"}";
-			
-			Long startTime = System.nanoTime();
-			
-			//logger.info("index : " + i + " / filter : " + filter + " / ");
+		System.out.println(jsonKeyMapManager.toString());
+		
+		Map<String, Object> result = jsonKeyMapManager.find("");
+		System.out.println("result = " + result.toString());
+
+		System.out.println("// 2nd update ---------------------------------------------------------");
+		for (Integer i = 0 ; i < 3 ; i++) {
+			//MyClass myClass = new MyClass(i.toString(), UUID.randomUUID().toString(), random.nextInt(100), Boolean.valueOf(i.toString()).toString(), random.nextInt(200));
+			MyClass myClass = new MyClass(i.toString(), "sadfwstw4t4e", 1, Boolean.valueOf(i.toString()).toString(), 1);
 			try {
-				//logger.info(multipleVariableKeyMapManager.getByFilter(mapName, filter));
-				logger.info("result map size : " + multipleVariableKeyMapManager.getByFilter(mapName, filter).size());
-				Map<String, Object> ret = multipleVariableKeyMapManager.getByFilter(mapName, filter);
-			} catch (ExceptionNotFound | ExceptionBadRequest e) {
-				logger.error(e.toString());
+				String jsonKey = om.writeValueAsString(myClass);
+				jsonKeyMapManager.put(jsonKey, "test value 2");
+			} catch (JsonProcessingException e) {
+				logger.error("[DemoApplication].main = " + e);
 			}
-			
-			Long endTime = System.nanoTime();
-			Long diffTime = endTime - startTime;
-			logger.info("diffTime : " + diffTime + " in (ns)" + " / " + diffTime/1000000.0 + " in (ms)");
 		}
+		
+		System.out.println(jsonKeyMapManager.toString());
+		
+		result = jsonKeyMapManager.find("$.[?(@.key != '0' && @.sex == 'false')]");
+		System.out.println("result = " + result.toString());
+		
+		
+		
+//		ObjectMapper om = new ObjectMapper();
+//		
+//		MultipleVariableKeyMapManager multipleVariableKeyMapManager = new MultipleVariableKeyMapManagerImpl();
+//		
+//		Random random = new Random();
+//		
+//		String mapName = "testMap";
+//		try {
+//			logger.info("test 1) addMap : " + multipleVariableKeyMapManager.addMap(mapName).toString());
+//		} catch (ExceptionAlreadyExist e) {
+//			logger.error(e.toString());
+//		}
+//		
+//		for (Integer i = 0 ; i < 10000 ; i++) {
+//			MyClass myClass = new MyClass(i.toString(), UUID.randomUUID().toString(), random.nextInt(100), Boolean.valueOf(i.toString()).toString(), random.nextInt(200));
+//			try {
+//				String strMyClass = om.writeValueAsString(myClass);
+//				multipleVariableKeyMapManager.put(mapName, strMyClass, myClass.toString());
+//				
+//				try {
+//					logger.info("key : " + strMyClass + ", stored data" + multipleVariableKeyMapManager.getByKey(mapName, strMyClass));
+//				} catch (ExceptionNotFound | ExceptionBadRequest e) {
+//					logger.error(e.toString());
+//				}
+//			} catch (Exception e) {
+//				logger.error(e.toString());
+//			}
+//		}
+//		System.out.println("test???");
+//		
+//		Integer testCase = 100;
+//		for (Integer i = 0 ; i < testCase ; i++) {
+//			//
+//			String filter = "";
+//			Integer age = random.nextInt(100);
+//			filter = "{\"age\":" + age +"}";
+//			
+//			Long startTime = System.nanoTime();
+//			
+//			//logger.info("index : " + i + " / filter : " + filter + " / ");
+//			try {
+//				//logger.info(multipleVariableKeyMapManager.getByFilter(mapName, filter));
+//				logger.info("result map size : " + multipleVariableKeyMapManager.getByFilter(mapName, filter).size());
+//				Map<String, Object> ret = multipleVariableKeyMapManager.getByFilter(mapName, filter);
+//			} catch (ExceptionNotFound | ExceptionBadRequest e) {
+//				logger.error(e.toString());
+//			}
+//			
+//			Long endTime = System.nanoTime();
+//			Long diffTime = endTime - startTime;
+//			logger.info("diffTime : " + diffTime + " in (ns)" + " / " + diffTime/1000000.0 + " in (ms)");
+//		}
 	}
 }
 

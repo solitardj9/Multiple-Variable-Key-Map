@@ -48,6 +48,17 @@ public class MultipleVariableKeyMapManagerImpl implements MultipleVariableKeyMap
 		}
 	}
 	
+	@Override
+	public Map<String/*key*/, Object/*current value*/> getMap(String mapName) throws ExceptionNotFound {
+		//
+		if (!repository.containsKey(mapName)) {
+			throw new ExceptionNotFound(mapName + " is not found");
+		}
+		else {
+			Map<String, Object> retMap = new HashMap<>(repository.get(mapName));
+			return retMap;
+		}
+	}
 
 	@Override
 	public Boolean deleteMap(String mapName) throws ExceptionNotFound {

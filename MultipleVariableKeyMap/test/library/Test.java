@@ -1,5 +1,7 @@
 package library;
 
+import java.util.Map;
+
 import library.exception.ExceptionAlreadyExist;
 import library.exception.ExceptionBadRequest;
 import library.exception.ExceptionNotFound;
@@ -63,7 +65,18 @@ public class Test {
 		System.out.println("test 7-2) put : old value=" + ((ret != null) ? ret.toString() : "null"));
 		
 		try {
-			System.out.println("test 8) getAll :" + manager.getAll(mapName).toString());
+			System.out.println("test 8-1) getAll :" + manager.getAll(mapName).toString());
+		} catch (ExceptionNotFound e) {
+			System.out.println(e.toString());
+		}
+		
+		try {
+			Map<String, Object> retMap = manager.getMap(mapName);
+			System.out.println("test 8-2) getMap :" + retMap.toString());
+			System.out.println("test 8-2) get(key1) :" + retMap.get(key1.replace(" ", "")));
+			retMap.put(key1.replace(" ", ""), "{\"value\":\"this is new data.\"}");
+			System.out.println("test 8-2) retMap :" + retMap.toString());
+			System.out.println("test 8-2) getAll :" + manager.getAll(mapName).toString());
 		} catch (ExceptionNotFound e) {
 			System.out.println(e.toString());
 		}
