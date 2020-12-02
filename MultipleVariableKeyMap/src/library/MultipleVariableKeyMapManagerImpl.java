@@ -1,25 +1,22 @@
 package library;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Sets;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
 
-import library.data.MultiVarKey;
 import library.exception.ExceptionAlreadyExist;
-import library.exception.ExceptionBadRequest;
 import library.exception.ExceptionNotFound;
 
 public class MultipleVariableKeyMapManagerImpl implements MultipleVariableKeyMapManager {
@@ -27,13 +24,9 @@ public class MultipleVariableKeyMapManagerImpl implements MultipleVariableKeyMap
 	private static final Logger logger = LoggerFactory.getLogger(MultipleVariableKeyMapManagerImpl.class);
 	
 	/* main  repository */
-	private Map<String, Map<String, Object>> repository = new ConcurrentHashMap<>();
+	private Map<String, Map<JsonObject, Object>> repository = new ConcurrentHashMap<>();
 	
-	/* repository for fast search */
-	private Map<String, Map<String/*multiple-variable-key-name*/, Map<String/*multiple-variable-key-value*/, Set<String/*key*/>>>> multipleVariableKeyRepository = new ConcurrentHashMap<>();
-	
-	//private static Gson gson = new Gson();
-	private static Gson gson = new GsonBuilder().registerTypeAdapter(TreeMap.class, new TreeMapDeserializer()).setDateFormat("yyyy-MM-dd HH:mm:ss").serializeNulls().create();
+	private static Gson gson = new Gson();
 	
 	@Override
 	public Boolean addMap(String mapName) throws ExceptionAlreadyExist {
@@ -43,23 +36,10 @@ public class MultipleVariableKeyMapManagerImpl implements MultipleVariableKeyMap
 		}
 		else {
 			repository.put(mapName, new ConcurrentHashMap<>());
-			multipleVariableKeyRepository.put(mapName, new ConcurrentHashMap<>());
 			return true;
 		}
 	}
 	
-	@Override
-	public Map<String/*key*/, Object/*current value*/> getMap(String mapName) throws ExceptionNotFound {
-		//
-		if (!repository.containsKey(mapName)) {
-			throw new ExceptionNotFound(mapName + " is not found");
-		}
-		else {
-			Map<String, Object> retMap = new HashMap<>(repository.get(mapName));
-			return retMap;
-		}
-	}
-
 	@Override
 	public Boolean deleteMap(String mapName) throws ExceptionNotFound {
 		//
@@ -68,233 +48,147 @@ public class MultipleVariableKeyMapManagerImpl implements MultipleVariableKeyMap
 		}
 		else {
 			repository.remove(mapName);
-			multipleVariableKeyRepository.remove(mapName);
 			return true;
 		}
 	}
-
+	
 	@Override
-	public Object put(String mapName, String key, Object value) {
-		//
-		Object ret = null;
-		Map<String, Object> map = repository.getOrDefault(mapName, new ConcurrentHashMap<>());
-		
-		try {
-			MultiVarKey multiVarKey = makeKey(key);
-			
-			String sortedKey = multiVarKey.getKey();
-			
-			if (map.containsKey(sortedKey)) {
-				ret = map.put(sortedKey, value);
-				repository.put(mapName, map);
-			}
-			else {
-				ret = map.put(sortedKey, value);
-				repository.put(mapName, map);
-				
-				Map<String/*multiple-variable-key-name*/, Map<String/*multiple-variable-key-value*/, Set<String/*key*/>>> multipleVariableKeyMap = multipleVariableKeyRepository.getOrDefault(mapName, new ConcurrentHashMap<>());
-				for (Entry<String, Object> iter : multiVarKey.getKeyMap().entrySet()) {
-					String keyName = iter.getKey();
-					String keyValue = iter.getValue().toString();
-					
-					Map<String/*multiple-variable-key-value*/, Set<String/*key*/>> multipleVariableKeyValuesAndKey = multipleVariableKeyMap.getOrDefault(keyName, new ConcurrentHashMap<>());
-					Set<String> keys = multipleVariableKeyValuesAndKey.getOrDefault(keyValue, new ConcurrentSkipListSet<>());
-					keys.add(sortedKey);
-					
-					multipleVariableKeyValuesAndKey.put(keyValue, keys);
-					
-					multipleVariableKeyMap.put(keyName, multipleVariableKeyValuesAndKey);
-				}
-				multipleVariableKeyRepository.put(mapName, multipleVariableKeyMap);
-			}
-		} catch (ExceptionBadRequest e) {
-			logger.error(e.toString());
-			return null;
-		}
-		
-		return ret;
-	}
-	
-	@SuppressWarnings("unchecked")
-	private MultiVarKey makeKey(String key) throws ExceptionBadRequest {
-		//
-		try {
-			TreeMap<String, Object> keyMap = gson.fromJson(key, TreeMap.class);
-			
-			for (Entry<String, Object> iter : keyMap.entrySet()) {
-				Object keyValue = iter.getValue();
-				if (!isValidType(keyValue)) {
-					throw new ExceptionBadRequest("Key inclueds invalid data type : " + iter.getKey() + ", " + keyValue.getClass());
-				}
-			}
-			
-			if (keyMap.isEmpty()) {
-				throw new ExceptionBadRequest("key is empty");
-			}
-			
-			MultiVarKey multiVarKey = new MultiVarKey(keyMap, gson.toJson(keyMap));
-			return multiVarKey;
-		} catch (Exception e) {
-			throw new ExceptionBadRequest(e.toString());
-		}
-	}
-	
-	private Boolean isValidType(Object object) {
-		//
-		if (object instanceof Integer || object instanceof Long || object instanceof Double || object instanceof Float || object instanceof String) {
-			return true;
-		}
-		return false;
-	}
-	
-
-	@Override
-	public Object getByKey(String mapName, String key) throws ExceptionNotFound, ExceptionBadRequest {
+	public Object put(String mapName, String jsonKey, Object value) throws ExceptionNotFound {
 		//
 		if (!repository.containsKey(mapName)) {
 			throw new ExceptionNotFound(mapName + " is not found");
 		}
 		else {
-			Map<String, Object> map = repository.get(mapName);
-			Object ret = null;
-			try {
-				ret = map.get(makeKey(key).getKey());
-			} catch (ExceptionBadRequest e) {
-				throw new ExceptionBadRequest(e.getMessage());
-			}
-			return ret;
+			return repository.get(mapName).put(makeJsonKey(jsonKey), value);	
 		}
 	}
-
+	
 	@Override
-	public Map<String, Object> getByFilter(String mapName, String filter) throws ExceptionNotFound, ExceptionBadRequest {
-		//
-		try {
-			if (!multipleVariableKeyRepository.containsKey(mapName)) {
-				throw new ExceptionNotFound(mapName + " is not found");
-			}
-			else {
-				Set<String> intersectionSet = getFilteredKeys(mapName, filter);
-
-				if (intersectionSet != null) {
-					Map<String, Object> retMap = new HashMap<>();
-					for (String iter : intersectionSet) {
-						retMap.put(iter, repository.get(mapName).get(iter));
-					}
-					return retMap;
-				}
-				else {
-					return null;
-				}
-			}
-		} catch (ExceptionBadRequest e) {
-			throw new ExceptionBadRequest(e.getMessage());
-		}
-	}
-
-	@Override
-	public Map<String, Object> getAll(String mapName) throws ExceptionNotFound {
+	public Object get(String mapName, String jsonKey) throws ExceptionNotFound {
 		//
 		if (!repository.containsKey(mapName)) {
 			throw new ExceptionNotFound(mapName + " is not found");
 		}
 		else {
-			Map<String, Object> map = repository.get(mapName);
-			Map<String, Object> retMap = new HashMap<>(map);
+			return repository.get(mapName).get(makeJsonKey(jsonKey));
+		}
+	}
+
+	@Override
+	public Map<String, Object> getMap(String mapName) throws ExceptionNotFound {
+		//
+		if (!repository.containsKey(mapName)) {
+			throw new ExceptionNotFound(mapName + " is not found");
+		}
+		else {
+			Map<JsonObject, Object> map = repository.get(mapName);
+			
+			Map<String, Object> retMap = new HashMap<>();
+			for (Entry<JsonObject, Object> iter : map.entrySet()) {
+				retMap.put(iter.getKey().toString(), iter.getValue());
+			}
+			
 			return retMap;
 		}
 	}
-
-	@Override
-	public Object removeByKey(String mapName, String key) throws ExceptionNotFound, ExceptionBadRequest {
+	
+	public Map<String, Object> find(String mapName, String predicate) throws ExceptionNotFound {
 		//
-		try {
-			if (!repository.containsKey(mapName)) {
-				throw new ExceptionNotFound(mapName + " is not found");
-			}
-			else {
-				MultiVarKey multiVarKey = makeKey(key);
-				String sortedKey = multiVarKey.getKey();
-				
-				Map<String/*multiple-variable-key-name*/, Map<String/*multiple-variable-key-value*/, Set<String/*key*/>>> multipleVariableKeyMap = multipleVariableKeyRepository.get(mapName);
-				for (Entry<String, Object> iter : multiVarKey.getKeyMap().entrySet()) {
-					String keyName = iter.getKey();
-					String keyValue = iter.getValue().toString();
-					
-					Map<String/*multiple-variable-key-value*/, Set<String/*key*/>> multipleVariableKeyValuesAndKey = multipleVariableKeyMap.get(keyName);
-					multipleVariableKeyValuesAndKey.get(keyValue).remove(sortedKey);
-					
-					multipleVariableKeyMap.put(keyName, multipleVariableKeyValuesAndKey);
-				}
-				multipleVariableKeyRepository.put(mapName, multipleVariableKeyMap);
-				
-				return repository.get(mapName).remove(sortedKey);
-			}
-		} catch (ExceptionBadRequest e) {
-			throw new ExceptionBadRequest(e.getMessage());
+		if (!repository.containsKey(mapName)) {
+			throw new ExceptionNotFound(mapName + " is not found");
 		}
-	}
-
-	@Override
-	public Map<String, Object> removeByFilter(String mapName, String filter) throws ExceptionNotFound, ExceptionBadRequest {
-		//
-		try {
-			if (!multipleVariableKeyRepository.containsKey(mapName)) {
-				throw new ExceptionNotFound(mapName + " is not found");
+		else {
+			Map<JsonObject, Object> map = repository.get(mapName);
+			
+			Set<JsonObject> keySet = map.keySet();
+			String strKeySet = gson.toJson(keySet);
+			
+			DocumentContext dc = JsonPath.parse(strKeySet);
+			Object object = dc.read(predicate);
+			
+			String strObject = gson.toJson(object);
+			JsonArray jsonArray = gson.fromJson(strObject, JsonArray.class);
+			
+			Map<String, Object> ret = new HashMap<>();
+			for (JsonElement jeIter : jsonArray) {
+			    JsonObject selectedJsonkey = jeIter.getAsJsonObject();
+			    ret.put(selectedJsonkey.toString(), map.get(selectedJsonkey));
 			}
-			else {
-				Set<String> intersectionSet = getFilteredKeys(mapName, filter);
-
-				if (intersectionSet != null) {
-					Map<String, Object> retMap = new HashMap<>();
-					for (String iter : intersectionSet) {
-						retMap.put(iter, repository.get(mapName).get(iter));
-						repository.get(mapName).remove(iter);
-					}
-					return retMap;
-				}
-				else {
-					return null;
-				}
-			}
-		} catch (ExceptionBadRequest e) {
-			throw new ExceptionBadRequest(e.getMessage());
+			
+			return ret;
 		}
 	}
 	
-	private Set<String> getFilteredKeys(String mapName, String filter) throws ExceptionBadRequest {
+	private JsonObject makeJsonKey(String jsonKey) {
 		//
-		try {
-			MultiVarKey filterKey = makeKey(filter);
-			TreeMap<String, Object> filterKeyMap = filterKey.getKeyMap();
-			
-			List<Set<String>> keys = new ArrayList<>();
-			Map<String/*multiple-variable-key-name*/, Map<String/*multiple-variable-key-value*/, Set<String/*key*/>>> multipleVariableKeyMap = multipleVariableKeyRepository.get(mapName);
-			for (Entry<String, Object> iter : filterKeyMap.entrySet()) {
-				Map<String/*multiple-variable-key-value*/, Set<String/*key*/>> keyValueMap = multipleVariableKeyMap.get(iter.getKey());
-				if (keyValueMap != null) {
-					String value = iter.getValue().toString();
-					Set<String> keySet = keyValueMap.get(value);
-					keys.add(keySet);
-				}
-			}
-			
-			Set<String> intersectionSet = null;
-			if (keys.size() == 1) {
-				intersectionSet = keys.get(0);
-			}
-			else if (keys.size() > 1) {
-				intersectionSet = keys.get(0);
-				for (int i = 1 ; i < keys.size() ; i++) {
-					intersectionSet = Sets.intersection(intersectionSet, keys.get(i));
-				}
-			}
-			else {
-				return null;
-			}
-			return intersectionSet;
-		} catch (ExceptionBadRequest e) {
-			throw new ExceptionBadRequest(e.getMessage());
+		JsonObject jsonObject = gson.fromJson(jsonKey, JsonObject.class);
+		return jsonObject;
+	}
+	
+	@Override
+	public Object remove(String mapName, String jsonKey) throws ExceptionNotFound {
+		//
+		if (!repository.containsKey(mapName)) {
+			throw new ExceptionNotFound(mapName + " is not found");
 		}
+		else {
+			Map<JsonObject, Object> map = repository.get(mapName);
+			return map.remove(makeJsonKey(jsonKey));
+		}
+	}
+	
+	@Override
+	public void clear(String mapName) throws ExceptionNotFound {
+		//
+		if (!repository.containsKey(mapName)) {
+			throw new ExceptionNotFound(mapName + " is not found");
+		}
+		else {
+			Map<JsonObject, Object> map = repository.get(mapName);
+			synchronized (map) {
+				map.clear();
+			}
+		}
+	}
+	
+	@Override
+	public void remove(String mapName) throws ExceptionNotFound {
+		//
+		if (!repository.containsKey(mapName)) {
+			throw new ExceptionNotFound(mapName + " is not found");
+		}
+		else {
+			synchronized (repository) {
+				repository.remove(mapName);
+			}
+		}
+	}
+	
+	@Override
+	public void clear() {
+		//
+		synchronized (repository) {
+			repository.clear();
+		}
+	}
+	
+	@Override
+	public int size(String mapName) throws ExceptionNotFound {
+		if (!repository.containsKey(mapName)) {
+			throw new ExceptionNotFound(mapName + " is not found");
+		}
+		else {
+			return repository.get(mapName).size();
+		}
+	}
+	
+	@Override
+	public String toString() {
+		return repository.toString();
+	}
+	
+	@Override
+	public String toString(String mapName) {
+		return repository.get(mapName).toString();
 	}
 }
