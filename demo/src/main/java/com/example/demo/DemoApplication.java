@@ -84,7 +84,8 @@ public class DemoApplication {
 		try {
 			logger.info("test 1) addMap : " + jsonKeyMapManager.addMap(mapName).toString());
 			
-			for (Integer i = 0 ; i < 10000 ; i++) {
+			//for (Integer i = 0 ; i < 10000 ; i++) {
+			for (Integer i = 0 ; i < 10 ; i++) {
 				MyClass myClass = new MyClass(i.toString(), UUID.randomUUID().toString(), random.nextInt(100), Boolean.valueOf(i.toString()).toString(), random.nextInt(200));
 				try {
 					String strMyClass = om.writeValueAsString(myClass);
