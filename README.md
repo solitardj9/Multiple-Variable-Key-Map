@@ -23,7 +23,7 @@ MultipleVariableKeyMapManager manager = new MultipleVariableKeyMapManagerImpl();
 </code>
 </pre>
 
-###     2.2 Add Map
+###     2.2 Add map
 <pre>
 <code>
 String mapName = "testMap";
@@ -31,15 +31,7 @@ manager.addMap(mapName);
 </code>
 </pre>
 
-###     2.3 Delete Map
-<pre>
-<code>
-String mapName = "testMap";
-manager.deleteMap(mapName);
-</code>
-</pre>
-
-###     2.4 Put Data
+###     2.3 Put data
 <pre>
 <code>
 String key1 = "{\"key1\":\"AAA\", \"key2\":1, \"key3\":11.3}";
@@ -56,34 +48,46 @@ manager.put(mapName, key3, value3);
 </code>
 </pre>
 
-###     2.4 Get by Key
+###     2.4 Get
 <pre>
 <code>
 manager.getByKey(mapName, key1);
 </code>
 </pre>
 
-###     2.5 Get by Key Filter
+###     2.5 Find by predicate
+reference : Json-Path (https://github.com/json-path/JsonPath)
 <pre>
 <code>
-String filter = "{\"key2\":\"1\", \"key3\":11.3}";
-manager.getByFilter(mapName, filter);
+String predicate = "$.[?(@.key != '0' && @.sex == 'false')]";
+manager.find(mapName, predicate);
 </code>
 </pre>
 
-###     2.6 Remove by Key
+###     2.6 Remove data in map at specific key
 <pre>
 <code>
-manager.removeByKey(mapName, key1);
+manager.remove(mapName, key1);
 </code>
 </pre>
 
-###     2.5 Remove by Key Filter
+###     2.7 clear data in map
 <pre>
 <code>
-filter = "{\"key2\":\"2\", \"key3\":14.3}";
-manager.removeByFilter(mapName, filter);
+manager.clear(mapName);
 </code>
 </pre>
 
+###     2.8 Remove map
+<pre>
+<code>
+manager.remove(mapName);
+</code>
+</pre>
 
+###     2.9 claer Maps
+<pre>
+<code>
+manager.clear();
+</code>
+</pre>
